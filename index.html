@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLayer – Real-Time AI Output Verifier</title>
+    <!-- Google Fonts: Inter and Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container" id="app-container" style="display: none;">
+        <!-- Sidebar / Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#6366f1" />
+                            <stop offset="50%" stop-color="#a855f7" />
+                            <stop offset="100%" stop-color="#10b981" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 15 C65 15, 80 30, 80 50 C80 70, 65 85, 50 85 C35 85, 20 70, 20 50 C20 30, 35 15, 50 15 Z" stroke="url(#logo-grad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="240" stroke-dashoffset="0" />
+                    <path d="M50 32 Q50 50, 68 50 Q50 50, 50 68 Q50 50, 32 50 Q50 50, 50 32 Z" fill="url(#logo-grad)" />
+                </svg>
+                <div class="brand-text">
+                    <h1>Truth<span>Layer</span></h1>
+                    <span class="tagline">AI Output Verifier</span>
+                </div>
+            </div>
+            
+            <nav class="side-nav">
+                <a href="#" class="nav-item active">
+                    <i class="fa-solid fa-chart-line"></i> Audit Console
+                </a>
+
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>TruthLayer v1.0.0</p>
+                <span class="footer-note">Powered by Wikipedia & NLP</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h2>Real-Time Fact Checker & Hallucination Detector</h2>
+                    <p>Verify AI output against external reliable knowledge sources in real time.</p>
+                </div>
+                <div class="user-profile">
+                    <div class="notification-wrapper">
+                        <i class="fa-regular fa-bell icon-btn" id="btn-notifications">
+                            <span class="notification-badge" id="notification-badge">2</span>
+                        </i>
+                        <div class="notification-dropdown" id="notification-dropdown" style="display: none;">
+                            <div class="dropdown-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-btn" id="btn-clear-notifications">Clear All</button>
+                            </div>
+                            <div class="dropdown-body" id="notification-list">
+                                <div class="notification-item unread">
+                                    <div class="notification-icon success"><i class="fa-solid fa-circle-check"></i></div>
+                                    <div class="notification-info">
+                                        <p class="notification-msg">TruthLayer Engine initialized successfully.</p>
+                                        <span class="notification-time">Just now</span>
+                                    </div>
+                                </div>
+                                <div class="notification-item unread">
+                                    <div class="notification-icon info"><i class="fa-solid fa-server"></i></div>
+                                    <div class="notification-info">
+                                        <p class="notification-msg">Connected to local FastAPI backend.</p>
+                                        <span class="notification-time">1 min ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-wrapper">
+                        <div class="profile-avatar" id="btn-profile">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="profile-dropdown" id="profile-dropdown" style="display: none;">
+                            <div class="dropdown-header profile-info-header">
+                                <div class="profile-meta">
+                                    <h4 class="profile-name">Vivek Tandel</h4>
+                                    <span class="profile-role">Lead Auditor</span>
+                                </div>
+                            </div>
+                            <div class="dropdown-body profile-menu-body">
+                                <div class="profile-menu-item" id="btn-theme-toggle">
+                                    <i class="fa-solid fa-sun" id="theme-icon"></i> <span>Light Mode</span>
+                                </div>
+                                <a href="#" class="profile-menu-item logout border-top" id="btn-logout">
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Input Section -->
+                <section class="card input-section">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-paragraph"></i> Input Content</h3>
+                        <div class="preset-buttons">
+                            <button class="btn btn-secondary btn-sm" id="preset-true">
+                                <i class="fa-solid fa-check"></i> Factual Preset
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="preset-false">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Hallucinated Preset
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="preset-mixed">
+                                <i class="fa-solid fa-shuffle"></i> Mixed Preset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="textarea-wrapper">
+                            <textarea id="input-text" placeholder="Paste AI-generated text, articles, or paragraphs here for factual verification... (Minimum 10 characters)"></textarea>
+                            <div class="char-counter"><span id="char-count">0</span> characters</div>
+                        </div>
+                        <button id="btn-verify" class="btn btn-primary btn-block">
+                            <span class="btn-text">Verify Accuracy</span>
+                            <i class="fa-solid fa-circle-notch fa-spin btn-spinner" style="display: none;"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Processing / Loading Overlay -->
+                <div class="loading-overlay" id="loading-overlay" style="display: none;">
+                    <div class="loading-spinner-container">
+                        <div class="pulse-ring"></div>
+                        <i class="fa-solid fa-shield-halved spinner-logo"></i>
+                        <h4>Analyzing Text Structure...</h4>
+                        <p class="loading-step" id="loading-step-text">Segmenting sentences and extracting key entities...</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="loading-progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section (Initially Hidden) -->
+                <section class="results-container" id="results-container" style="display: none;">
+                    <div class="results-summary">
+                        <!-- Score Card -->
+                        <div class="card score-card">
+                            <div class="card-body">
+                                <h3>Overall Truth Score</h3>
+                                <div class="gauge-container">
+                                    <svg class="progress-ring" width="160" height="160">
+                                        <circle class="progress-ring__background" stroke="#2a2f42" stroke-width="12" fill="transparent" r="70" cx="80" cy="80"/>
+                                        <circle class="progress-ring__circle" stroke="#10b981" stroke-width="12" fill="transparent" r="70" cx="80" cy="80" id="score-ring"/>
+                                    </svg>
+                                    <div class="gauge-val">
+                                        <span id="overall-score-text">0</span>%
+                                    </div>
+                                </div>
+                                <div class="score-badge" id="score-badge">Likely Accurate</div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Card -->
+                        <div class="card stats-card">
+                            <div class="card-header">
+                                <h3>Verification Metrics</h3>
+                            </div>
+                            <div class="card-body metrics-grid">
+                                <div class="metric-box metric-true">
+                                    <span class="metric-label"><i class="fa-solid fa-circle-check"></i> Likely True</span>
+                                    <span class="metric-value" id="count-true">0</span>
+                                </div>
+                                <div class="metric-box metric-uncertain">
+                                    <span class="metric-label"><i class="fa-solid fa-circle-minus"></i> Uncertain</span>
+                                    <span class="metric-value" id="count-uncertain">0</span>
+                                </div>
+                                <div class="metric-box metric-false">
+                                    <span class="metric-label"><i class="fa-solid fa-circle-xmark"></i> Falsified</span>
+                                    <span class="metric-value" id="count-false">0</span>
+                                </div>
+                                <div class="metric-box metric-total">
+                                    <span class="metric-label"><i class="fa-solid fa-list-ol"></i> Total Sentences</span>
+                                    <span class="metric-value" id="count-total">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sentence Highlighter & Details -->
+                    <div class="results-details-grid">
+                        <!-- Highlighted Output -->
+                        <div class="card interactive-output-card">
+                            <div class="card-header">
+                                <h3>Interactive Sentence Map</h3>
+                                <span class="help-text">Click a sentence to view detailed fact verification reports.</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="highlighted-text-container" id="sentence-markup-container">
+                                    <!-- Sentence blocks will go here dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inspector Panel -->
+                        <div class="card inspector-card" id="inspector-card">
+                            <div class="card-header">
+                                <h3><i class="fa-solid fa-magnifying-glass-chart"></i> Fact Inspector</h3>
+                                <span class="badge" id="inspector-status-badge">Select a Sentence</span>
+                            </div>
+                            <div class="card-body" id="inspector-empty-state">
+                                <div class="empty-state-content">
+                                    <i class="fa-solid fa-arrow-left-long"></i>
+                                    <p>Select any sentence on the left side map to inspect its factual source matches, similarity confidence, and explanations.</p>
+                                </div>
+                            </div>
+                            <div class="card-body" id="inspector-details" style="display: none;">
+                                <div class="inspector-section sentence-block-quote">
+                                    <p class="inspected-sentence" id="inspector-sentence-text">"Sentence text goes here."</p>
+                                </div>
+
+                                <div class="inspector-section">
+                                    <div class="details-row">
+                                        <div class="details-col">
+                                            <span class="label">Confidence Score</span>
+                                            <div class="confidence-display">
+                                                <div class="confidence-bar-bg">
+                                                    <div class="confidence-bar-fill" id="inspector-confidence-bar" style="width: 75%"></div>
+                                                </div>
+                                                <span class="value" id="inspector-confidence-val">75%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="inspector-section">
+                                    <span class="label"><i class="fa-solid fa-compass"></i> Verification Explanation</span>
+                                    <p class="explanation-text" id="inspector-explanation">Explanation text goes here.</p>
+                                </div>
+
+                                <div class="inspector-section source-box" id="inspector-source-container">
+                                    <span class="label"><i class="fa-solid fa-book-open"></i> Wikipedia Reference</span>
+                                    <h4 class="source-title" id="inspector-source-title">Wikipedia Article Title</h4>
+                                    <p class="source-extract" id="inspector-source-extract">Source snippet extract showing facts goes here.</p>
+                                    <a href="#" target="_blank" class="source-link" id="inspector-source-url">
+                                        View Full Wikipedia Article <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Authentication Screen -->
+    <div class="auth-container" id="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logo-grad-auth" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#6366f1" />
+                            <stop offset="50%" stop-color="#a855f7" />
+                            <stop offset="100%" stop-color="#10b981" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 15 C65 15, 80 30, 80 50 C80 70, 65 85, 50 85 C35 85, 20 70, 20 50 C20 30, 35 15, 50 15 Z" stroke="url(#logo-grad-auth)" stroke-width="8" stroke-linecap="round" />
+                    <path d="M50 32 Q50 50, 68 50 Q50 50, 50 68 Q50 50, 32 50 Q50 50, 50 32 Z" fill="url(#logo-grad-auth)" />
+                </svg>
+                <h2>Truth<span>Layer</span></h2>
+                <p id="auth-subtitle">Sign in to access the audit console</p>
+            </div>
+            
+            <div class="auth-body">
+                
+                <!-- Input Fields -->
+                <div class="auth-form-group">
+                    <label for="auth-username">Username or Email</label>
+                    <input type="text" id="auth-username" placeholder="Enter username...">
+                </div>
+                <div class="auth-form-group">
+                    <label for="auth-password">Password</label>
+                    <input type="password" id="auth-password" placeholder="Enter password...">
+                </div>
+                
+                <div id="auth-error-msg" class="auth-error" style="display: none;">
+                    Invalid username or password.
+                </div>
+                
+                <button class="btn btn-primary btn-block" id="btn-submit-auth">Sign In</button>
+            </div>
+            
+            <div class="auth-footer">
+                <span id="auth-toggle-msg">Don't have an credentials?</span>
+                <button class="link-btn" id="btn-toggle-auth-mode">Setup User Password</button>
+            </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
