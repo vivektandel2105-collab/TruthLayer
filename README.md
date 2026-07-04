@@ -1,153 +1,67 @@
-import logging
-from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+# TruthLayer – Real-Time AI Output Verifier Backend (New Version)
 
-# Import modules from our rewritten backend
-from utils import get_sentences, get_keywords, query_wikipedia_multi, detect_domain, nlp_spacy
-from verifier import verify_sentence, calculate_sentence_similarity, using_embeddings
+This is the enterprise-grade backend for **TruthLayer**, a real-time AI hallucination detection engine. It splits input text into semantic sentences, extracts key entities, performs domain-sensitive searches on the Wikipedia API, ranks pages semantically, compares sentences against passages using SentenceTransformers, and generates confidence scores with detailed explanations.
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("TruthLayer")
+## Features
 
-app = FastAPI(
-    title="TruthLayer API",
-    description="Enterprise-grade AI Hallucination Detection Engine",
-    version="2.0.0"
-)
+1. **Intelligent Entity & Keyword Extraction**: Uses spaCy NER first, falling back to noun chunks and then regex to isolate specific query terms.
+2. **Domain Detection**: Automatically classifies the input text into one of 10 domains (DBMS, Networking, Operating Systems, Java, Python, Machine Learning, History, Science, Mathematics, Computer Architecture) to refine Wikipedia search queries.
+3. **Multi-Source Semantic Verification**: Queries Wikipedia for each extracted entity independently and retrieves article summaries/introductory paragraphs.
+4. **Semantic Similarity & Ranking**: Uses SentenceTransformers (`all-MiniLM-L6-v2`) to rank Wikipedia articles and discards unrelated pages (similarity < 0.35).
+5. **Passage-Level Cosine Similarity**: Compares the input sentence against all sentences and paragraphs of the retrieved Wikipedia articles, using the highest passage-level similarity.
+6. **Calibrated Confidence Scoring**: Maps semantic similarities to confidence scores (0-100) using custom brackets.
+7. **Structured Concept Overlap Explanations**: Generates professional explanations highlighting key matched concepts (e.g. uniqueness, tuple identification) rather than generic text templates.
 
-# Enable CORS for frontend integration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+## Directory Structure
 
-# Request and Response schemas
-class VerificationRequest(BaseModel):
-    text: str
-    max_articles: Optional[int] = 3
-    use_nlp: Optional[bool] = True
+```text
+TruthLayer_New/
+├── main.py              # FastAPI Web API and endpoints
+├── utils.py             # Domain detection, entity extraction, and Wikipedia retrieval utilities
+├── verifier.py          # SentenceTransformer similarity scoring, calibration, and concept extraction
+├── requirements.txt     # Python dependencies list
+├── README.md            # Documentation and instructions
+└── tests/
+    └── test_backend.py  # Unit test suite verifying core components
+```
 
-class SentenceResult(BaseModel):
-    sentence: str
-    score: int
-    status: str  # "true", "uncertain", "false"
-    keywords: List[str]
-    source_title: Optional[str] = None
-    source_url: Optional[str] = None
-    source_extract: Optional[str] = None
-    explanation: str
+## Installation & Setup
 
-class VerificationResponse(BaseModel):
-    overall_score: int
-    sentence_count: int
-    true_count: int
-    uncertain_count: int
-    false_count: int
-    results: List[SentenceResult]
+1. **Prerequisites**: Python 3.8+ is recommended.
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Download spaCy language model**:
+   ```bash
+   python -m spacy download en_core_web_sm
+   ```
 
-# ----------------- ENDPOINTS -----------------
+## Running the API Server
 
-@app.get("/health")
-@app.get("/api/health")
-def health_check():
-    return {
-        "status": "healthy",
-        "using_embeddings": using_embeddings,
-        "using_spacy": nlp_spacy is not None
-    }
+Start the FastAPI backend with:
+```bash
+python main.py
+```
+By default, the server will start at `http://127.0.0.1:8000`.
 
-@app.post("/verify", response_model=VerificationResponse)
-@app.post("/api/verify", response_model=VerificationResponse)
-def verify_text(request: VerificationRequest):
-    input_text = request.text.strip()
-    if not input_text:
-        raise HTTPException(status_code=400, detail="Input text cannot be empty.")
-        
-    # Step 1: Split input into sentences
-    sentences = get_sentences(input_text)
-    if not sentences:
-        raise HTTPException(status_code=400, detail="No sentences detected in the input.")
-        
-    # Step 2: Detect overall domain of the input text
-    detected_text_domain = detect_domain(input_text)
-    logger.info(f"Overall text domain detected: {detected_text_domain}")
-    
-    results = []
-    total_score = 0
-    true_count = 0
-    uncertain_count = 0
-    false_count = 0
-    
-    for sentence in sentences:
-        # Step 3: Extract keywords/entities using NER -> Noun chunks -> Regex
-        keywords = get_keywords(sentence)
-        logger.info(f"Sentence: '{sentence}' -> Keywords: {keywords}")
-        
-        # Step 4: Detect domain for sentence, fallback to overall text domain
-        sentence_domain = detect_domain(sentence) or detected_text_domain
-        logger.info(f"Sentence domain: {sentence_domain}")
-        
-        # Step 5: Search Wikipedia per entity
-        articles = query_wikipedia_multi(keywords, domain=sentence_domain)
-        
-        # Step 6: Rank Wikipedia pages and filter unrelated ones (similarity < 0.35)
-        filtered_articles = []
-        if articles:
-            extracts = [art["extract"] for art in articles]
-            similarities = calculate_sentence_similarity(sentence, extracts)
-            
-            ranked_articles = []
-            for sim, art in zip(similarities, articles):
-                # Ignore unrelated pages using a threshold of 0.35
-                if sim >= 0.35:
-                    ranked_articles.append((sim, art))
-                    
-            # Sort by similarity descending
-            ranked_articles.sort(key=lambda x: x[0], reverse=True)
-            filtered_articles = [art for sim, art in ranked_articles]
-            logger.info(f"Wikipedia articles ranked. Kept {len(filtered_articles)} of {len(articles)} pages.")
-            
-        # Step 7: Verify sentence accuracy & generate explanations
-        verification = verify_sentence(sentence, keywords, filtered_articles)
-        
-        status = verification["status"]
-        if status == "true":
-            true_count += 1
-        elif status == "uncertain":
-            uncertain_count += 1
-        else:
-            false_count += 1
-            
-        total_score += verification["score"]
-        
-        results.append(SentenceResult(
-            sentence=sentence,
-            score=verification["score"],
-            status=status,
-            keywords=keywords,
-            source_title=verification["source_title"],
-            source_url=verification["source_url"],
-            source_extract=verification["source_extract"],
-            explanation=verification["explanation"]
-        ))
-        
-    overall_score = int(total_score / len(sentences)) if sentences else 0
-    
-    return VerificationResponse(
-        overall_score=overall_score,
-        sentence_count=len(sentences),
-        true_count=true_count,
-        uncertain_count=uncertain_count,
-        false_count=false_count,
-        results=results
-    )
+### API Endpoints
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+- **GET `/health` or `/api/health`**
+  Returns API health and initialization state for spaCy and SentenceTransformers.
+
+- **POST `/verify` or `/api/verify`**
+  Accepts a JSON payload:
+  ```json
+  {
+    "text": "Water boils at 100 degrees Celsius under standard atmospheric pressure."
+  }
+  ```
+  Returns detailed verification metrics and results for each sentence.
+
+## Running Tests
+
+Run the test suite to verify domain detection, keyword extraction, and similarity mappings:
+```bash
+python tests/test_backend.py
+```
