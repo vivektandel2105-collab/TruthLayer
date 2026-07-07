@@ -244,8 +244,11 @@ function verifySentenceAccuracy(sentence, keywords, articles) {
         };
     }
     
-    let bestMatch = articles[0];
+    let bestMatch = null;
     let highestSimilarity = 0.0;
+    // Minimum similarity an article must reach to be considered relevant.
+    // Below this threshold the article is considered unrelated and discarded.
+    const RELEVANCE_THRESHOLD = 0.10;
     
     for (const article of articles) {
         const sim = calculateSimilarity(sentence, article.extract);
@@ -253,6 +256,19 @@ function verifySentenceAccuracy(sentence, keywords, articles) {
             highestSimilarity = sim;
             bestMatch = article;
         }
+    }
+    
+    // If no article clears the relevance bar, treat the claim as unverifiable
+    // rather than citing a spurious, unrelated Wikipedia page.
+    if (!bestMatch || highestSimilarity < RELEVANCE_THRESHOLD) {
+        return {
+            score: 0,
+            status: "false",
+            source_title: null,
+            source_url: null,
+            source_extract: null,
+            explanation: `No sufficiently relevant Wikipedia sources found for: "${keywords.join(", ")}". This claim could not be verified against any known reference.`
+        };
     }
     
     let score = 0;
@@ -537,11 +553,24 @@ async function handleVerify() {
                 const keywords = extractKeywords(sentence);
                 const queryStr = keywords.join(" ");
                 
-                // Step 3: Fetch related Wikipedia summaries
-                let articles = await queryWikipedia(queryStr);
-                if (articles.length === 0 && keywords.length > 2) {
-                    const backupQuery = keywords.slice(0, 2).join(" ");
-                    articles = await queryWikipedia(backupQuery);
+                // Step 3: Fetch related Wikipedia summaries.
+                // Search per entity independently (mirrors the backend approach) so that
+                // a compound query like "Messi cricket player" does not confuse Wikipedia
+                // and return unrelated articles.
+                const seenTitles = new Set();
+                let articles = [];
+                for (const kw of keywords) {
+                    const kwArticles = await queryWikipedia(kw, 2);
+                    for (const art of kwArticles) {
+                        if (!seenTitles.has(art.title)) {
+                            seenTitles.add(art.title);
+                            articles.push(art);
+                        }
+                    }
+                }
+                // Fallback: if nothing found, try the top-2 keywords as a combined query.
+                if (articles.length === 0 && keywords.length > 0) {
+                    articles = await queryWikipedia(keywords.slice(0, 2).join(" "), 3);
                 }
                 
                 // Step 4: Verification calculations
